@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Disposable Tests</title>
+    <script src="Sprockets.js"></script>
+    <script>
+        var value = {
+            a: 1,
+            b: 2
+        }
+
+        Sprockets.Events(window, "load", function () {
+            var array = []
+
+            function push(item) {
+                var index = array.length;
+                array.push(item);
+                return new Sprockets.Disposable(function () {
+                    array.splice(index, 1);
+                });
+            }
+
+            var disposable = push(value);
+            console.log(array.length === 1);
+
+            disposable.dispose();
+            console.log(array.length === 0);
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>

@@ -1,0 +1,50 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Proxy Tests</title>
+    <script src="Sprockets.js"></script>
+    <script>
+        var value = {
+            a: "string",
+            b: 1,
+            c: true
+        }
+
+        Sprockets.Events(window, "load", function () {
+            var proxy = new Sprockets.Proxy(value, function (message, property, value) {
+                console.log([message, property, value]);
+            });
+
+            console.log(value);
+            console.log("--------------");
+
+            var property = proxy('a');
+            property();
+            console.log(value);
+            console.log("--------------");
+            property("new string");
+            console.log(value);
+            console.log("--------------");
+            property.dispose();
+            console.log(value);
+            console.log("--------------");
+            property = proxy("NEW");
+            console.log(value);
+            console.log("--------------");
+
+            property = proxy.b;
+            console.log(value);
+            console.log("--------------");
+            proxy["b"] = 3;
+            console.log(value);
+            console.log("--------------");
+            property = proxy["NEW2"];
+            console.log(value);
+            console.log("--------------");
+        });
+    </script>
+</head>
+<body>
+
+</body>
+</html>

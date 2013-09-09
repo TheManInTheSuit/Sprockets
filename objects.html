@@ -1,0 +1,39 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Object tests</title>
+    <script src="Sprockets.js"></script>
+    <script>
+        var value = {
+            a: 1,
+            b: 2
+        }
+
+        Sprockets.Events(window, "load", function () {
+            var foobar = Sprockets.Objects.inherit(value);
+            foobar.foo = function () { return "bar"; }
+
+            var result = Sprockets.Objects.inherit(foobar);
+            result.c = 3;
+
+            console.log(result.a === 1);
+            console.log(result.b === 2);
+            console.log(result.c === 3);
+            console.log(result.foo() == "bar");
+            console.log("-------------------");
+
+            var result2 = Sprockets.Objects.clone(result);
+            console.log(result2.a === 1);
+            console.log(result2.b === 2);
+            console.log(result2.c === 3);
+            console.log(result2.foo() == "bar");
+            console.log("-------------------");
+
+            result2.c = 5;
+            console.log(result.c != result2.c);
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>

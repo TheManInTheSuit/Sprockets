@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Observable Tests</title>
+    <script src="Sprockets.js"></script>
+    <script>
+        var value = {
+            a: 1,
+            b: 2
+        }
+
+        Sprockets.Events(window, "load", function () {
+            var _next = false,
+                _newValue = "new value",
+                _newValue2 = "new value 2";
+
+            var next = function (value) {
+                _next = value;
+            }
+            var observable = new Sprockets.Observable();
+            var disposable = observable.subscribe(next);
+
+            observable(_newValue);
+            console.log(_next);
+
+            observable(_newValue2);
+            console.log(_next);
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>

@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Function Tests</title>
+    <script src="Sprockets.js"></script>
+    <script>
+        function fn() {
+            for(var i = 0, length = 5000; i < length; i++) {
+                console.log("running " + i.toString());
+            }
+        }
+
+        Sprockets.Events(window, "load", function () {
+            var async = new Sprockets.Function(fn);
+
+            var element = document.getElementById("button");
+            element = new Sprockets.Object(element);
+
+            var disposable;
+            element.on("click", function () {
+                console.log("disposed of async handle");
+                console.log(disposable);
+                disposable.dispose();
+            });
+            disposable = async.invoke().dispose();
+        });
+    </script>
+</head>
+<body>
+
+<button id="button">submit</button>
+
+</body>
+</html>

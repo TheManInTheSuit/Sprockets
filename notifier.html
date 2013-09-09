@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Notifier Tests</title>
+    <script src="Sprockets.js"></script>
+    <script>
+        Sprockets.Events(window, "load", function () {
+            var _next, _done, _fail, _then, _always;
+            var reset = function () {
+                _next = _done = _fail = _then = _always = false;
+            }
+            reset();
+
+            var next = function () {
+                _next = true;
+            }
+            var options = {
+                done: function (data) {
+                    _done = true;
+                },
+                fail: function (error) {
+                    _fail = true;
+                },
+                always: function () {
+                    _always = true;
+                },
+                then: function () {
+                    _then = true;
+                }
+            }
+
+            var notifier = new Sprockets.Notifier(next, options);
+            notifier();
+
+            console.log(_next);
+            console.log(_done);
+            console.log(!_fail);
+            console.log(_then);
+            console.log(_always);
+            console.log("--------------");
+
+            reset();
+            next = function () { throw new Error("Test"); }
+            notifier = new Sprockets.Notifier(next, options);
+            notifier();
+
+            console.log(!_next);
+            console.log(!_done);
+            console.log(_fail);
+            console.log(!_then);
+            console.log(_always);
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>

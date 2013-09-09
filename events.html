@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Events Tests</title>
+    <script src="Sprockets.js"></script>
+    <script>
+        Sprockets.Events(window, "load", function () {
+            var event = new Sprockets.Event("CustomEvent", {
+                detail: {
+                    message: "This is a message",
+                    time: new Date()
+                },
+                bubbles: true,
+                cancelable: true
+            });
+
+            var element = document.getElementById("button");
+            var handle = event.subscribe(element, function () {
+                console.log(true);
+            });
+            var onclick = Sprockets.Events(element, "click", function () {
+                console.log("Click works and invoking custom event.");
+                if (handle.isDisposed) {
+                    console.log("Handle is disposed.  Disposing onclick event.");
+                    onclick.dispose();
+                }
+                handle();
+                handle.dispose();
+            });
+
+            onclick();
+        });
+    </script>
+</head>
+<body>
+
+<button id="button">submit</button>
+
+</body>
+</html>

@@ -1,0 +1,39 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Array Tests</title>
+    <script src="Sprockets.js"></script>
+    <script>
+        var value = {
+            a: 1,
+            b: 2
+        }
+
+        Sprockets.Events(window, "load", function () {
+            var array = new Sprockets.Array();
+            console.log(array.length == 0);
+
+            array.add(value);
+            console.log(array.length == 1);
+
+            array.remove(value);
+            console.log(array.length == 0);
+
+            array = new Sprockets.Array();
+            array.add(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+            console.log(array.length == 10);
+
+            array.each(function (data) {
+                return data * 2;
+            });
+            console.log(array[0] == 0);
+            console.log(array[9] == 18);
+
+            array.clear();
+            console.log(array.length == 0);
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>
