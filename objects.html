@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <title>Object tests</title>
+    <title>Object Examples</title>
     <script src="Sprockets.js"></script>
     <script>
         var value = {
@@ -10,27 +10,30 @@
         }
 
         Sprockets.Events(window, "load", function () {
-            var foobar = Sprockets.Objects.inherit(value);
+            var foobar = function () {};
             foobar.foo = function () { return "bar"; }
+	    Sprockets.decorate(foobar, value);
 
-            var result = Sprockets.Objects.inherit(foobar);
+            var result = new Object();
             result.c = 3;
+	    Sprockets.decorate(result, foobar);
 
-            console.log(result.a === 1);
-            console.log(result.b === 2);
-            console.log(result.c === 3);
-            console.log(result.foo() == "bar");
+            console.log(result.a === value.a);
+            console.log(result.b === value.b);
+            console.log(result.c !== value.c);
+            console.log(result.foo() == foobar.foo());
             console.log("-------------------");
 
-            var result2 = Sprockets.Objects.clone(result);
-            console.log(result2.a === 1);
-            console.log(result2.b === 2);
-            console.log(result2.c === 3);
-            console.log(result2.foo() == "bar");
-            console.log("-------------------");
-
+            var result2 = Sprockets.clone(result);
             result2.c = 5;
-            console.log(result.c != result2.c);
+            console.log(result.a === result2.a);
+            console.log(result.b === result2.b);
+            console.log(result.c !== result2.c);
+            console.log(result.foo() == foobar.foo());
+            console.log("-------------------");
+
+	    console.log(["result", result.c]);
+            console.log(["result2", result2.c]);
         });
     </script>
 </head>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Commands Examples</title>
+    <script src="Sprockets.js"></script>
+    <script>
+        Sprockets.Events(window, "load", function () {
+		var shell = {
+			value: 3
+		};
+		var outerShell = {
+			innerShell: {
+				value: 5
+			}
+		}
+		
+		var invoker = new Sprockets.Invoker();
+		var multiplier = new Sprockets.Command({
+			execute: function (value) {
+				var newValue = this() * value;
+				this(newValue);
+			},
+			undo: function (value) {
+				var oldValue = this() / value;
+				this(oldValue);
+			}
+		});
+		
+		invoker.bind(shell, "value");
+		invoker.visit(multiplier);
+		console.log([shell.value, multiplier.data()]);
+		
+		var result = multiplier(4);
+		console.log([shell.value, multiplier.data()]);
+		
+		result.undo();
+		console.log([shell.value, multiplier.data()]);
+		
+		
+		console.log("--------------------");
+		
+		
+		invoker.bind(outerShell.innerShell, "value");
+		invoker.visit(multiplier);
+		console.log([shell.value, outerShell.innerShell.value, multiplier.data()]);
+		
+		result = multiplier(5);
+		console.log([shell.value, outerShell.innerShell.value, multiplier.data()]);
+		
+		result.undo();
+		console.log([shell.value, outerShell.innerShell.value, multiplier.data()]);
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>

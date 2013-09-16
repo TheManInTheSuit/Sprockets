@@ -1,28 +1,41 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <title>Function Tests</title>
+    <title>Function Examples</title>
     <script src="Sprockets.js"></script>
     <script>
         function fn() {
-            for(var i = 0, length = 5000; i < length; i++) {
+            for(var i = 0, length = 10; i < length; i++) {
                 console.log("running " + i.toString());
             }
         }
 
         Sprockets.Events(window, "load", function () {
-            var async = new Sprockets.Function(fn);
+            var async = new Sprockets.Function(fn, {
+		done: function(result) { console.log("done with: " + result); },
+		error: function(error) { console.log(error); },
+		always: function() { console.log("always"); }
+	    });
 
             var element = document.getElementById("button");
             element = new Sprockets.Object(element);
 
             var disposable;
             element.on("click", function () {
-                console.log("disposed of async handle");
-                console.log(disposable);
-                disposable.dispose();
+		if(disposable.isDisposed) {
+			console.log("async handle is already disposed.");
+		}
+		else {
+			console.log("disposed of async handle");
+			console.log(disposable);
+			disposable.dispose();
+		}
             });
-            disposable = async.invoke().dispose();
+	    
+	    async();
+	    async.always(function () { console.log("always"); });
+            disposable = async();
+	    disposable.dispose();
         });
     </script>
 </head>

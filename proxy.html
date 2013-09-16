@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <title>Proxy Tests</title>
+    <title>Proxy Examples</title>
     <script src="Sprockets.js"></script>
     <script>
         var value = {
@@ -20,26 +20,17 @@
 
             var property = proxy('a');
             property();
-            console.log(value);
             console.log("--------------");
             property("new string");
-            console.log(value);
             console.log("--------------");
             property.dispose();
-            console.log(value);
             console.log("--------------");
             property = proxy("NEW");
-            console.log(value);
             console.log("--------------");
 
             property = proxy.b;
-            console.log(value);
             console.log("--------------");
             proxy["b"] = 3;
-            console.log(value);
-            console.log("--------------");
-            property = proxy["NEW2"];
-            console.log(value);
             console.log("--------------");
         });
     </script>

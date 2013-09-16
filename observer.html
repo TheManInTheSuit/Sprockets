@@ -1,0 +1,34 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Observer Examples</title>
+    <script src="Sprockets.js"></script>
+    <script>
+	function log(name) {
+		console.log("Ran '" + name + "'.");
+	}
+    
+        Sprockets.Events(window, "load", function () {
+		var _next, _done, _fail, _then, _always;
+		var next = function () { log("next"); }
+		var reset = function () {
+			_next = _done = _fail = _then = _always = false;
+		}
+		var unsubscriber = null;
+		var notifier = new Sprockets.Observer(next, null, {
+			done: function (data) { log("done"); },
+			fail: function (error) { log("fail"); },
+			always: function () { log("always"); },
+			then: function () { log("then"); }
+		});
+		
+		reset();
+		notifier();
+		
+		console.log("------------------");
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>

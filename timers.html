@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Timer Examples</title>
+    <script src="Sprockets.js"></script>
+    <script>
+        var value = {
+            a: 1,
+            b: 2
+        }
+
+        Sprockets.Events(window, "load", function () {
+		var timer = new Sprockets.Timer(500);
+		var disposable = timer.subscribe(function () {
+			console.log("Timer elapsed.");
+		});
+		
+		timer.start();
+		
+		setTimeout(function () {
+			timer.stop();
+		}, 5000);
+        });
+    </script>
+</head>
+<body>
+</body>
+</html>
