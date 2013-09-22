@@ -4,24 +4,98 @@
     <title>Observable Examples</title>
     <script src="Sprockets.js"></script>
     <script>
-        var value = {
-		a: 1,
-		b: 2
-        }
-
-        Sprockets.Events(window, "load", function () {
-		var _next = false;
-
-		var next = function (value) {
-			_next = value;
-			console.log(_next);
-		}
-		var observable = new Sprockets.Observable();
-		var disposable = observable.subscribe(next);
-		
-		observable.notify("This is how you send a notification!");
-		observable.notify("Second notification");
+	var handle = new Sprockets.Html(window);
+	
+        handle.subscribe("load", function () {
+		test(Creation);
+		test(Subscription);
+		test(Notification);
+		test(Unsubscription);
+		test(Dispose);
         });
+	
+	function assert(predicate, message) {
+		if(!predicate) throw new Error(message || "Assert condition failed");
+		else return true;
+	}
+	function test(delegate) {
+		var string = "Test: " + delegate.name;
+		
+		try { 
+			delegate();
+			string += " passed.";
+		}
+		catch (error) { 
+			string += " failed.  Reason: ";
+			string += error; 
+		}
+		console.log(string);
+	}
+	
+	function Creation() {
+		var result = null;
+		var observable = new Sprockets.Observable(
+			function () { result = true },
+			function () { result = false}
+		);
+		
+		assert(result === null);
+	}
+	function Subscription() {
+		var result = null;
+		var observable = new Sprockets.Observable(
+			function () { result = true },
+			function () { result = false}
+		);
+		
+		assert(result === null);
+		observable.subscribe(function () { result = null; });
+		assert(result === true);
+	}
+	function Notification() {
+		var result = null;
+		var observable = new Sprockets.Observable(
+			function () { result = true },
+			function () { result = false}
+		);
+		
+		assert(result === null);
+		observable.subscribe(function () { result = null; });
+		assert(result === true);
+		observable.notify();
+		assert(result === null);
+	}
+	function Unsubscription() {
+		var result = null;
+		var observable = new Sprockets.Observable(
+			function () { result = true },
+			function () { result = false}
+		);
+		
+		assert(result === null);
+		observable.subscribe(function () { result = null; });
+		assert(result === true);
+		observable.notify();
+		assert(result === null);
+		observable.dispose();
+		assert(result === false);
+	}
+	function Dispose() {
+		var result = null;
+		var observable = new Sprockets.Observable(
+			function () { result = true },
+			function () { result = false}
+		);
+		
+		assert(result === null);
+		observable.subscribe(function () { result = null; });
+		assert(result === true);
+		observable.notify();
+		assert(result === null);
+		observable.dispose();
+		assert(result === false);
+		assert(observable.disposed === true);
+	}
     </script>
 </head>
 <body>

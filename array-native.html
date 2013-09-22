@@ -1,25 +1,24 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
-    <title>Array Examples</title>
+    <title>Native Array Examples</title>
     <script src="Sprockets.js"></script>
     <script>
-        var ext = Sprockets.Collections;
 	var handle = new Sprockets.Html(window);
 	
         handle.subscribe("load", function () {
-		test(ExtensionsAdd);
-		test(ExtensionsAddAt);
-		test(ExtensionsRemove);
-		test(ExtensionsRemoveAt);
-		test(ExtensionsEvery);
-		test(ExtensionsSome);
-		test(ExtensionsContains);
-		test(ExtensionsFilter);
-		test(ExtensionsReduce);
-		test(ExtensionsMap);
-		test(ExtensionsDistinct);
-		test(ExtensionsClear);
+		test(NativeAdd);
+		test(NativeAddAt);
+		test(NativeRemove);
+		test(NativeRemoveAt);
+		test(NativeEvery);
+		test(NativeSome);
+		test(NativeContains);
+		test(NativeFilter);
+		test(NativeReduce);
+		test(NativeMap);
+		test(NativeDistinct);
+		test(NativeClear);
         });
 	
 	function assert(predicate, message) {
@@ -37,107 +36,113 @@
 		console.log(string);
 	}
 	
-	function ExtensionsAdd() {
-		var array = [];
+	function NativeAdd() {
+		var array = new Sprockets.Collections.Mutable();
 		var length = array.length;
 		
-		ext.add(array, 5);
+		array.add(5);
 		
 		assert(length !== array.length);
 		assert(array[0] === 5);
 	}
-	function ExtensionsAddAt() {
-		var array = [0, 1, 2, 3, 4];
+	function NativeAddAt() {
+		var array = new Sprockets.Collections.Mutable(0, 1, 2, 3, 4);
 		var length = array.length;
 		var value = 5;
 		
-		ext.addAt(array, 1, value);
+		array.addAt(1, value);
 		
 		assert(length !== array.length, "Length hasn't changed.");
 		assert(array[1] === value, "Index is in an unexpected state");
 	}
-	function ExtensionsRemove() {
-		var array = [0, 1, 2, 3, 4];
+	function NativeRemove() {
+		var array = new Sprockets.Collections.Mutable(0, 1, 2, 3, 4);
 		var length = array.length;
 		var value = 2;
 		
-		ext.remove(array, value);
+		array.remove(value);
 		
 		assert(length !== array.length, "Length hasn't changed.")
 		assert(length === array.length + 1, "Length is in an unexpected state.");
 		assert(array[2] !== value);
 	}
-	function ExtensionsRemoveAt() {
-		var array = [0, 1, 2, 3, 4];
+	function NativeRemoveAt() {
+		var array = new Sprockets.Collections.Mutable(0, 1, 2, 3, 4);
 		var length = array.length;
 		var value = 2;
 		
-		ext.removeAt(array, value);
+		array.removeAt(value);
 		
 		assert(length !== array.length)
 		assert(array[2] !== value);
 		assert(array[2] === 3);
 	}
-	function ExtensionsEvery() {
-		var array = [0, 1, 2, 3, 4];
+	function NativeEvery() {
+		var array = new Sprockets.Collections.Mutable(0, 1, 2, 3, 4);
 		var predicate = function (n) { return n < 5; };
-		var result = ext.every(array, predicate);
+		var result = array.every(predicate);
 		
 		assert(result, "Not all members satisfied the predicate.");
 	}
-	function ExtensionsSome() {
-		var array = [0, 2, 4, 6, 8];
+	function NativeSome() {
+		var array = new Sprockets.Collections.Mutable(0, 2, 4, 6, 8);
 		var predicate = function (n) { return n < 5; };
-		var result = ext.some(array, predicate);
+		var result = array.some(predicate);
 		
 		assert(result, "Not all members satisfied the predicate.");
 	}
-	function ExtensionsContains() {
-		var array = [0, 1, 2, 3];
-		var result = ext.contains(array, 2);
+	function NativeContains() {
+		var array = new Sprockets.Collections.Mutable(0, 1, 2, 3);
+		var result = array.contains(2);
 		
 		assert(result, "Array did not contain the specified entry.");
 		
-		result = ext.contains(array, 5);
+		result = array.contains(5);
 		assert(result === false, "Contains should have returned false");
 	}
-	function ExtensionsFilter() {
-		var array = [0, 1, 2, 3];
+	function NativeFilter() {
+		var array = new Sprockets.Collections.Mutable(0, 1, 2, 3);
 		var predicate = function (n) { return n === 2; };
 		
-		ext.filter(array, predicate);
+		array.filter(predicate);
 		
 		assert(array.length === 3);
+		assert(array[0] === 0);
+		assert(array[1] === 1);
+		assert(array[2] === 3);
 	}
-	function ExtensionsReduce() {		
-		var array = [0, 1, 2, 3];
+	function NativeReduce() {		
+		var array = new Sprockets.Collections.Mutable(0, 1, 2, 3);
 		var predicate = function (first, second) { return first + second; };
-		var result = ext.reduce(array, predicate);
+		var result = array.reduce(predicate);
 		
 		assert(result === 6);
 	}
-	function ExtensionsMap() {		
-		var array = [0, 1, 2, 3];
+	function NativeMap() {		
+		var array = new Sprockets.Collections.Mutable(0, 1, 2, 3);
 		var delegate = function (n) { return n * 2; };
 		
-		ext.map(array, delegate);
+		array.map(delegate);
 		
+		assert(array[0] === 0);
+		assert(array[1] === 2);
+		assert(array[2] === 4);
 		assert(array[3] === 6);
 	}
-	function ExtensionsDistinct() {
-		var array = [0, 0, 1, 1, 2, 2];
+	function NativeDistinct() {
+		var array = new Sprockets.Collections.Mutable(0, 0, 1, 1, 2, 2);
 		
-		ext.distinct(array);
+		array.distinct();
 		
 		assert(array[0] === 0);
 		assert(array[1] === 1);
 		assert(array[2] === 2);
 	}
-	function ExtensionsClear() {
-		var array = [0, 1, 2, 3];
+	function NativeClear() {
+		var array = new Sprockets.Collections.Mutable(0, 1, 2, 3);
 		var length = array.length;
 		
-		ext.clear(array);
+		array.clear();
 		
 		assert(array.length !== length);
 		assert(array.length === 0);

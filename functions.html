@@ -4,44 +4,32 @@
     <title>Function Examples</title>
     <script src="Sprockets.js"></script>
     <script>
+	var int = 0;
+		
         function fn() {
-            for(var i = 0, length = 10; i < length; i++) {
-                console.log("running " + i.toString());
-            }
+		for(var i = 0, length = 10; i < length; i++) {
+			int += i;
+		}
+		console.log(int);
+		return int;
         }
+	
+	var handle = new Sprockets.Html(window);
+	
+        handle.subscribe("load", function () {
+		var action = new Sprockets.Function(fn, {
+			done: function(result) { console.log("done with: " + result); },
+			error: function(error) { console.log(error); },
+			always: function() { console.log("always"); }
+		});
 
-        Sprockets.Events(window, "load", function () {
-            var async = new Sprockets.Function(fn, {
-		done: function(result) { console.log("done with: " + result); },
-		error: function(error) { console.log(error); },
-		always: function() { console.log("always"); }
-	    });
-
-            var element = document.getElementById("button");
-            element = new Sprockets.Object(element);
-
-            var disposable;
-            element.on("click", function () {
-		if(disposable.isDisposed) {
-			console.log("async handle is already disposed.");
-		}
-		else {
-			console.log("disposed of async handle");
-			console.log(disposable);
-			disposable.dispose();
-		}
-            });
-	    
-	    async();
-	    async.always(function () { console.log("always"); });
-            disposable = async();
-	    disposable.dispose();
+		action();
+		var delayed = action.delay(1000);
+		var result = delayed();
+		result.dispose();
         });
     </script>
 </head>
 <body>
-
-<button id="button">submit</button>
-
 </body>
 </html>

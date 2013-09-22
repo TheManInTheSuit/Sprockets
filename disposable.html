@@ -4,28 +4,37 @@
     <title>Disposable Examples</title>
     <script src="Sprockets.js"></script>
     <script>
-        var value = {
-            a: 1,
-            b: 2
-        }
-
-        Sprockets.Events(window, "load", function () {
-            var array = []
-
-            function push(item) {
-                var index = array.length;
-                array.push(item);
-                return new Sprockets.Disposable(function () {
-                    array.splice(index, 1);
-                });
-            }
-
-            var disposable = push(value);
-            console.log(array.length === 1);
-
-            disposable.dispose();
-            console.log(array.length === 0);
+	var handle = new Sprockets.Html(window);
+	
+        handle.subscribe("load", function () {
+		test(Disposable);
         });
+	
+	function assert(predicate, message) {
+		if(!predicate) throw new Error(message || "Assert condition failed");
+		else return true;
+	}
+	function test(delegate) {
+		var string = "Test: " + delegate.name;
+		
+		try { 
+			delegate();
+			string += " passed.";
+		}
+		catch (error) { string += " failed.  Reason: " + error; }
+		console.log(string);
+	}
+	
+	function Disposable() {
+		var result = false;
+		var disposable = new Sprockets.Disposable(function () {
+			result = true;
+		});
+		
+		disposable.dispose();
+		
+		assert(result === true);
+	}
     </script>
 </head>
 <body>

@@ -4,35 +4,91 @@
     <title>Proxy Examples</title>
     <script src="Sprockets.js"></script>
     <script>
-        var value = {
-            a: "string",
-            b: 1,
-            c: true
-        }
-
-        Sprockets.Events(window, "load", function () {
-            var proxy = new Sprockets.Proxy(value, function (message, property, value) {
-                console.log([message, property, value]);
-            });
-
-            console.log(value);
-            console.log("--------------");
-
-            var property = proxy('a');
-            property();
-            console.log("--------------");
-            property("new string");
-            console.log("--------------");
-            property.dispose();
-            console.log("--------------");
-            property = proxy("NEW");
-            console.log("--------------");
-
-            property = proxy.b;
-            console.log("--------------");
-            proxy["b"] = 3;
-            console.log("--------------");
+	var handle = new Sprockets.Html(window);
+	
+        handle.subscribe("load", function () {
+		test(Construct);
+		test(Create);
+		test(Access);
+		test(Mutate);
+		test(Delete);
         });
+	function assert(predicate, message) {
+		if(!predicate) throw new Error(message || "Assert condition failed");
+		else return true;
+	}
+	function test(delegate) {
+		var string = "Test: " + delegate.name;
+		
+		try { 
+			delegate();
+			string += " passed.";
+		}
+		catch (error) { 
+			string += " failed.  Reason: ";
+			string += error; 
+		}
+		console.log(string);
+	}
+	function Construct() {
+		var value = { result: null };
+		var proxy = new Sprockets.Proxy(value);
+		
+		assert(proxy("result")() === null);
+		assert(value.result === null);
+	}
+	function Access() {
+		var caught = false;
+		var value = { result: "success" };
+		var proxy = new Sprockets.Proxy(value, function (message, property, value) {
+			if(message === "read") caught = true;
+		});
+		
+		assert(proxy("result")() === "success");
+		assert(value.result === "success");
+		assert(caught === true);
+	}
+	function Mutate() {		
+		var caught = false;
+		var value = { result: null };
+		var proxy = new Sprockets.Proxy(value, function (message, property, value) {
+			if(message === "update") caught = true;
+		});
+		
+		var property = proxy("result");
+		property(2);
+		
+		assert(property() === 2);
+		assert(value.result === 2);
+		assert(caught === true);
+	}
+	function Create() {
+		var caught = false;
+		var value = { result: null };
+		var proxy = new Sprockets.Proxy(value, function (message, property, value) {
+			if(message === "create") caught = true;
+		});
+		
+		var property = proxy("new");
+		property("success");
+		
+		assert(property() === "success");
+		assert(value.new === "success");
+		assert(caught === true);
+	}
+	function Delete() {
+		var caught = false;
+		var value = { bool: false };
+		var proxy = new Sprockets.Proxy(value, function (message, property, value) {
+			if(message === "delete") caught = true;
+		});
+		
+		var property = proxy("bool");
+		property.dispose();
+		assert(property() === undefined);
+		assert(value.bool === undefined);
+		assert(caught === true);
+	}
     </script>
 </head>
 <body>

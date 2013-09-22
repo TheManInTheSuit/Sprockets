@@ -4,29 +4,73 @@
     <title>Observer Examples</title>
     <script src="Sprockets.js"></script>
     <script>
-	function log(name) {
-		console.log("Ran '" + name + "'.");
-	}
-    
-        Sprockets.Events(window, "load", function () {
-		var _next, _done, _fail, _then, _always;
-		var next = function () { log("next"); }
-		var reset = function () {
-			_next = _done = _fail = _then = _always = false;
-		}
-		var unsubscriber = null;
-		var notifier = new Sprockets.Observer(next, null, {
-			done: function (data) { log("done"); },
-			fail: function (error) { log("fail"); },
-			always: function () { log("always"); },
-			then: function () { log("then"); }
-		});
-		
-		reset();
-		notifier();
-		
-		console.log("------------------");
+	var handle = new Sprockets.Html(window);
+	
+        handle.subscribe("load", function () {
+		test(Creation);
+		test(Notification);
+		test(Unsubscription);
+		test(Dispose);
         });
+	
+	function assert(predicate, message) {
+		if(!predicate) throw new Error(message || "Assert condition failed");
+		else return true;
+	}
+	function test(delegate) {
+		var string = "Test: " + delegate.name;
+		
+		try { 
+			delegate();
+			string += " passed.";
+		}
+		catch (error) { string += " failed.  Reason: " + error; }
+		console.log(string);
+	}
+	
+	function Creation() {
+		var result = false;
+		var observer = new Sprockets.Observer(
+			function () { result = true },
+			function () { result = false}
+		);
+		
+		assert(result === false);
+	}
+	function Notification() {
+		var result = false;
+		var observer = new Sprockets.Observer(
+			function () { result = true },
+			function () { result = false}
+		);
+		
+		assert(result === false);
+		observer.notify();
+		assert(result === true);
+	}
+	function Unsubscription() {
+		var result = false;
+		var observer = new Sprockets.Observer(
+			function () { result = true },
+			function () { result = false}
+		);
+		
+		assert(result === false);
+		observer.notify();
+		assert(result === true);
+		observer.dispose();
+		assert(result === false);
+	}
+	function Dispose() {
+		var result = false;
+		var observer = new Sprockets.Observer(
+			function () { result = true },
+			function () { result = false}
+		);
+		
+		observer.dispose();
+		assert(observer.disposed === true);
+	}
     </script>
 </head>
 <body>

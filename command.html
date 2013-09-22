@@ -4,52 +4,91 @@
     <title>Commands Examples</title>
     <script src="Sprockets.js"></script>
     <script>
-        Sprockets.Events(window, "load", function () {
-		var shell = {
-			value: 3
-		};
-		var outerShell = {
-			innerShell: {
-				value: 5
-			}
-		}
+	var handle = new Sprockets.Html(window);
+	
+        handle.subscribe("load", function () {
+		test(Do);
+		test(Undo);
+		test(Redo);
+        });
+	function assert(predicate, message) {
+		if(!predicate) throw new Error(message || "Assert condition failed");
+		else return true;
+	}
+	function test(delegate) {
+		var string = "Test: " + delegate.name;
 		
-		var invoker = new Sprockets.Invoker();
+		try { 
+			delegate();
+			string += " passed.";
+		}
+		catch (error) { 
+			string += " failed.  Reason: ";
+			string += error; 
+		}
+		console.log(string);
+	}
+	function Do() {
+		var invoker = new Sprockets.Invoker(3);
 		var multiplier = new Sprockets.Command({
-			execute: function (value) {
-				var newValue = this() * value;
-				this(newValue);
+			do: function (value) {
+				this(this() * value);
 			},
 			undo: function (value) {
-				var oldValue = this() / value;
-				this(oldValue);
+				this(this() / value);
 			}
 		});
 		
-		invoker.bind(shell, "value");
-		invoker.visit(multiplier);
-		console.log([shell.value, multiplier.data()]);
+		var multiplyByThree = invoker(multiplier);
+		var result = multiplyByThree(3);
 		
-		var result = multiplier(4);
-		console.log([shell.value, multiplier.data()]);
+		assert(result() === 9);
+	}
+	function Undo() {
+		var invoker = new Sprockets.Invoker(3);
+		var multiplier = new Sprockets.Command({
+			do: function (value) {
+				this(this() * value);
+			},
+			undo: function (value) {
+				this(this() / value);
+			}
+		});
+		
+		var multiplyByThree = invoker(multiplier);
+		var result = multiplyByThree(3);
+		assert(result() === 9);
 		
 		result.undo();
-		console.log([shell.value, multiplier.data()]);
-		
-		
-		console.log("--------------------");
-		
-		
-		invoker.bind(outerShell.innerShell, "value");
-		invoker.visit(multiplier);
-		console.log([shell.value, outerShell.innerShell.value, multiplier.data()]);
-		
-		result = multiplier(5);
-		console.log([shell.value, outerShell.innerShell.value, multiplier.data()]);
+		assert(result() === 3);
 		
 		result.undo();
-		console.log([shell.value, outerShell.innerShell.value, multiplier.data()]);
-        });
+		assert(result() === 3);
+	}
+	function Redo() {
+		var invoker = new Sprockets.Invoker(3);
+		var multiplier = new Sprockets.Command({
+			do: function (value) {
+				this(this() * value);
+			},
+			undo: function (value) {
+				this(this() / value);
+			}
+		});
+		
+		var multiplyByThree = invoker(multiplier);
+		var result = multiplyByThree(3);
+		assert(result() === 9);
+		
+		result.undo();
+		assert(result() === 3);
+		
+		result.undo();
+		assert(result() === 3);
+		
+		result.redo();
+		assert(result() === 9);
+	}
     </script>
 </head>
 <body>

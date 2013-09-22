@@ -4,23 +4,116 @@
     <title>Timer Examples</title>
     <script src="Sprockets.js"></script>
     <script>
-        var value = {
-            a: 1,
-            b: 2
-        }
-
-        Sprockets.Events(window, "load", function () {
-		var timer = new Sprockets.Timer(500);
-		var disposable = timer.subscribe(function () {
-			console.log("Timer elapsed.");
-		});
-		
-		timer.start();
-		
-		setTimeout(function () {
-			timer.stop();
-		}, 5000);
+	var handle = new Sprockets.Html(window);
+	
+        handle.subscribe("load", function () {
+		test(Creation);
+		test(Subscription);
+		test(Notification);
+		test(Elapsed);
+		test(Unsubscription);
+		test(Dispose);
         });
+	
+	function assert(predicate, message) {
+		if(!predicate) throw new Error(message || "Assert condition failed");
+		else return true;
+	}
+	function test(delegate) {
+		var string = "Test: " + delegate.name;
+		
+		try { 
+			delegate();
+			string += " passed.";
+		}
+		catch (error) { 
+			string += " failed.  Reason: ";
+			string += error; 
+		}
+		console.log(string);
+	}
+	
+	function Creation() {
+		var result = null;
+		var observable = new Sprockets.Timer(500,
+			function () { result = true; },
+			function () { result = false; }
+		);
+		
+		assert(result === null);
+	}
+	function Subscription() {
+		var result = null;
+		var observable = new Sprockets.Timer(500,
+			function () { result = true; },
+			function () { result = false; }
+		);
+		
+		assert(result === null);
+		observable.subscribe(function () { 
+			console.log("SUBSCRIBED");
+			result = null;
+		});
+		assert(result === true);
+	}
+	function Notification() {
+		var result = null;
+		var observable = new Sprockets.Timer(500,
+			function () { result = true; },
+			function () { result = false; }
+		);
+		
+		assert(result === null);
+		observable.subscribe(function () { result = null; });
+		assert(result === true);
+		observable.notify();
+		assert(result === null);
+	}
+	function Elapsed() {		
+		var result = 0;
+		var observable = new Sprockets.Timer(500,
+			function () { result += 100; },
+			function () { result = null; }
+		);
+		
+		observable.start();
+		
+		observable.subscribe(function () {
+			observable.stop();
+			assert(true);
+		});
+	}
+	function Unsubscription() {
+		var result = null;
+		var observable = new Sprockets.Timer(500,
+			function () { result = true; },
+			function () { result = false; }
+		);
+		
+		assert(result === null);
+		observable.subscribe(function () { result = null; });
+		assert(result === true);
+		observable.notify();
+		assert(result === null);
+		observable.dispose();
+		assert(result === false);
+	}
+	function Dispose() {
+		var result = null;
+		var observable = new Sprockets.Timer(500,
+			function () { result = true; },
+			function () { result = false; }
+		);
+		
+		assert(result === null);
+		observable.subscribe(function () { result = null; });
+		assert(result === true);
+		observable.notify();
+		assert(result === null);
+		observable.dispose();
+		assert(result === false);
+		assert(observable.disposed === true);
+	}
     </script>
 </head>
 <body>

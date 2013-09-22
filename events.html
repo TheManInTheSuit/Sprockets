@@ -4,40 +4,33 @@
     <title>Events Examples</title>
     <script src="Sprockets.js"></script>
     <script>
-        Sprockets.Events(window, "load", function () {
-		var event = new Sprockets.Event("CustomEvent", {
-			detail: {
-				message: "This is a message",
-				time: new Date()
-			},
-			bubbles: true,
-			cancelable: true
-		});
-
-		var element = document.getElementById("button");
-		var disposable = null;
-		var handle = event.subscribe(element, function () {
-			console.log(true);
-		});
-		var onclick = Sprockets.Events(element, "click", function () {
-			console.log("Click works and invoking custom event.");
-			if (handle.isDisposed) {
-				console.log("Handle is disposed.  Disposing onclick event.");
-				onclick.dispose();
-			}
-			else {
-				disposable = handle();
-				handle.dispose();
-			}
-		});
-
-		onclick();
-        });
+	function assert(predicate, message) {
+		if(!predicate) throw new Error(message || "Assert condition failed");
+		else return true;
+	}
+	function test(delegate) {
+		var string = "Test: " + delegate.name;
+		
+		try { 
+			delegate();
+			string += " passed.";
+		}
+		catch (error) { string += " failed.  Reason: " + error; }
+		console.log(string);
+	}
+	
+	var result = false;
+	var handle = new Sprockets.Html(window);
+		
+	handle.subscribe("load", function () {
+		result = true;
+		test(Loaded);
+	});
+	function Loaded() {		
+		assert(result === true);
+	}
     </script>
 </head>
 <body>
-
-<button id="button">submit</button>
-
 </body>
 </html>

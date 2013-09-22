@@ -9,14 +9,16 @@
             b: 2
         }
 
-        Sprockets.Events(window, "load", function () {
+	var handle = new Sprockets.Html(window);
+	
+        handle.subscribe("load", function () {
             var foobar = function () {};
             foobar.foo = function () { return "bar"; }
-	    Sprockets.decorate(foobar, value);
+	    Sprockets.implement(foobar, value);
 
             var result = new Object();
             result.c = 3;
-	    Sprockets.decorate(result, foobar);
+	    Sprockets.implement(result, foobar);
 
             console.log(result.a === value.a);
             console.log(result.b === value.b);

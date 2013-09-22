@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Combinators Examples</title>
+    <script src="Sprockets.js"></script>
+    <script>
+        
+	var factorial = Sprockets.Combinators.Y(function (f) {
+		return function(n) {
+			return n ? n * f(n - 1) : 1;
+		}
+	});
+
+	var fibonacci = Sprockets.Combinators.Y(function (f) {
+		return function(n) {
+			return n < 2 ? 1 : f(n - 1) + f(n - 2);
+		}
+	});
+	
+	var result = factorial(10);
+	console.log(result);
+	
+	result = fibonacci(25);
+	console.log(result);
+    </script>
+</head>
+<body>
+</body>
+</html>

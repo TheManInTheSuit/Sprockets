@@ -27,14 +27,16 @@ var Sprockets = {
 	implement: function (sender, argument) {
 		for (var property in argument) {
 			if (sender.hasOwnProperty(property)) {			
-				var parentProperty = argument[property];
-				
-				if (typeof parentProperty == "function") {
-					sender[property] = function () {
-						this.base = function () {
-							return Function.call(parentProperty, arguments);
+				var childProperty = argument[property];
+				var senderProperty = sender[property];
+				if (typeof childProperty == "function") {
+					Sprockets.define(sender).getter(property, function (/*arguments*/) {
+						var args = Array.prototype.slice.call(arguments);
+						childProperty.base = function () {
+							return senderProperty.apply(senderProperty, args);
 						}
-					}
+						childProperty.apply(childProperty, args);
+					});
 				}
 			}
 			else {
@@ -90,203 +92,315 @@ var Sprockets = {
 			}
 		}
 	},
+	empty: function (value) {
+		return value === undefined && value !== 0;
+	},
 	equals: function(sender, other) {
-		var result = true;
-		for(var member in sender) {
-			var property = sender[member];
-			
-			if(other.hasOwnProperty(member)) {
-				var otherProperty = other[member];
-				if(typeof property == "object") {
-					result = result && Sprockets.equals(property, otherProperty)
-				}
-				else {
-					result = result && (property == otherProperty);
-				}
-			}
-			else return false;
+		if(Sprockets.empty(sender) || Sprockets.empty(other)) {
+			return sender === other;
 		}
-		return result;
+		else {
+			var result = true;
+			if(typeof sender != "object" && typeof other != "object") {
+				result = sender == other;
+			}
+			for(var member in sender) {
+				var property = sender[member];
+				
+				if(other.hasOwnProperty(member)) {
+					var otherProperty = other[member];
+					if(typeof property == "object") {
+						result = result && Sprockets.equals(property, otherProperty)
+					}
+					else {
+						result = result && (property == otherProperty);
+					}
+				}
+				else return false;
+			}
+			return result;
+		}
+		
+	},
+	define: function (handle) {
+		var self = this;
+		this.getter = function (name, data, member) {
+			handle.__defineGetter__(name, function () { 
+				if(member) return data[member]; 
+				else return data;
+			});
+			return self;
+		}
+		this.setter = function(name, data, member) {
+			handle.__defineSetter__(name, function (value) {
+				if(member) data[member] = value;
+				else data[name] = value;
+			});
+			return self;
+		}
+		return this;
 	}
 };
-
+Sprockets.Object = function () {
+}
 Sprockets.Disposable = function (unsubscriber, handle) {
-	var _handle, _unsubscriber, _isDisposed;
-
-	_handle = handle;
-	_unsubscriber = unsubscriber;
-	_isDisposed = false;
-
-	this.dispose = function () {
-		_unsubscriber(_handle);
-		_isDisposed = true;
-	}
-	this.__defineGetter__("isDisposed", function () { return _isDisposed; });
+	var data = { IsDisposed: false }
+	
+	Sprockets.define(this)
+		.getter("disposed", data, "IsDisposed")
+		.getter("dispose", function () {
+			unsubscriber(handle);
+			data.IsDisposed = true;
+		});
 }
 
 Sprockets.Function = function (delegate, options) {
-	var self = this;
-	var interval = options ? (options.delay || 0) : 0;
-	self.options = options || { };
-	
-	var async = {
+	options = options || { };
+	var asyncResult = {
 		completed: false,
+		options: options,
 		state: null
 	}
+	var logic = function (/*arguments*/) {
+		var result, args = Array.prototype.slice.call(arguments);
 
-	var invoke = function (/*arguments*/) {
-		var args = arguments;		
-		var handle = setTimeout(function () {
-			async.state = function () {
-				var result;
+		try {
+			result = delegate.apply(delegate, args);
+			if(options.done) options.done(result);
+		}
+		catch (error) {
+			if (options.fail) options.fail(error);
+		}
+		finally {
+			if (options.always) options.always();
+		}
+		if (options.then) options.then();
 
-				try {
-					result = delegate.apply(delegate, args);
-					if(self.options.done) self.options.done(result);
-				}
-				catch (error) {
-					if (self.options.fail) self.options.fail(error);
-				}
-				finally {
-					if (self.options.always) self.options.always();
-				}
-				if (self.options.then) self.options.then();
-		
-				return result;
-			}.apply(async.state, args);
-			
-			async.completed = true;
-		}, interval);
-		
-		return new Sprockets.Disposable(function () {
-			clearTimeout(handle);
-			async.completed = true;
+		return result;
+	}
+	Sprockets.define(logic)
+		.getter("options", asyncResult, "options")
+		.getter("completed", asyncResult, "completed")
+		.getter("state", asyncResult, "state")
+		.getter("delay", function(interval) {
+			return function (/*arguments*/) {
+				var args = Array.prototype.slice.call(arguments);		
+				var handle = setTimeout(function () {
+					asyncResult.state = logic.apply(null, args);
+					asyncResult.completed = true;
+				}, interval);
+				
+				return new Sprockets.Disposable(function () {
+					clearTimeout(handle);
+					asyncResult.completed = true;
+				});
+			}
 		});
-	}
-	Sprockets.implement(invoke, Sprockets.Function.prototype);
-	invoke.__defineGetter__("options", function () {
-		return self.options;
-	});
-	invoke.__defineGetter__("state", function () { 
-		return async.state; 
-	});
-	invoke.__defineGetter__("completed", function () { 
-		return async.completed;
-	});
-	return invoke;
+	return logic;
 }
-Sprockets.Function.prototype = {
-	delay: function(value) { 
-		this.options.delay = { get: function () { return value; } } 
-		return this;
-	},
-	done: function(delegate) {
-		this.options.done = delegate;
-		return this;
-	},
-	fail: function(delegate) { 
-		this.options.fail = delegate;
-		return this;
-	},
-	always: function(delegate) { 
-		this.options.always = delegate;
-		return this;
-	},
-	then: function(delegate) { 
-		this.options.then = delegate;
-		return this;
-	}
-}
-
-Sprockets.Observer = function (notify, unsubscriber, options) {
-	var result = new Sprockets.Function(notify, options);
-	Sprockets.Disposable.call(result, unsubscriber);
-	return result;
-}
-
-Sprockets.Observable = function () {
-	var self = this;
-	self.observers = new Sprockets.Array();
+Sprockets.Function.prototype = function () {
+	var self = new Sprockets.Object();
 	
-	Sprockets.Disposable.call(self, function () {
-		self.observers.each(function(observer) {
+	self.partial = function () {
+		var fn = this, args = Array.prototype.slice.call(arguments, 1);
+		return function () {
+			var arg = 0;
+			for ( var i = 0, length = args.length; i < length && arg < length; i++ ) {
+				if (args[i] === undefined) {
+					args[i] = arguments[arg++];
+				}
+			}
+			return fn.apply(this, args);
+		};
+	}
+	self.curry = function () {
+		return function (x) {
+			return function (y) {
+				return self(x, y);
+			}
+		}
+	}
+	self.uncurry = function () {
+		return function (x) {
+			return function (y) {
+				return self(x)(y);
+			}
+		}
+	}
+	//for(n)(args)
+	self.for = function (n) {
+		return function () {
+			for(var i = 0; i < n; i++) {
+				self.apply(self, arguments);
+			}
+		}
+	}
+	//each(items)(args)
+	self.each = function (items) {
+		return function () {
+			for(var i = 0, length = items.length; i < length; i++) {
+				self.apply(self, arguments);
+			}
+		}
+	}
+	//while(predicate)(args)
+	self.while = function (predicate) {
+		return function () {
+			while (predicate()) {
+				self.apply(self, arguments);
+			}
+		}
+	}
+	self.when = function(predicate) {
+		return function () {
+			if(predicate()) self.apply(self, arguments);
+			return self;
+		}
+	}
+	self.fluently = function(delegate) {
+		return function() {
+			delegate.apply(self, arguments);
+			return self;
+		}
+	}
+	self.maybe = function (delegate) {
+		return function () {			
+			if(arguments.length !== 0) {
+				var each = Sprockets.Collections.each;
+				for(var i = 0, length = arguments.length; i < length; ++i) {
+					var value = arguments[i];
+					if(Sprockets.empty(value)) {
+						return value;
+					}
+				}
+				return delegate.apply(this, arguments);
+			}
+		}
+	}
+}();
+
+Sprockets.Combinators = function () {
+	//Ix = x
+	var I = this.I = function (x) {
+		return x;
+	}
+	//Kxy = x
+	var K = this.K = function (x, y) {
+		return function() {
+			return x;
+		}
+	}
+	//Sxyz = xz(yz)
+	var S = this.S = function (x, y, z) {
+		return function (y) {
+			return function (z) {
+				return x(z)(y(z));
+			}
+		}
+	}
+	//ix = xSK
+	var iota = this.iota = function (x) {
+		return x(S)(K);
+	}
+	//Bxyz = x(yz)
+	//B = S (K S) K
+	var B = this.B = function (x) {
+		return function(y) {
+			return function(z) {
+				return x(y(z));
+			}
+		}
+	}
+	//Cxyz = xyz
+	//C = S (S (K ( S (K S) K)) S) (K K)
+	var C = this.C = function (x) {
+		return function (y) {
+			return function (z) {
+				return x(y)(z);
+			}
+		}
+	}
+	//Wxy = xyy
+	//W = S S (S K)
+	var W = this.W = function(x) {
+		return function (y) {
+			return x(y)(y);
+		}
+	}
+	//Ux = x(x)
+	var U = this.U = function(x) {
+		return x(x);
+	}
+	//Y = S (K (S I I)) (S (S (K S) K) (K (S I I)))
+	var Y = this.Y = function(f) {
+		function g(x) {
+			return function (y) {
+				return f(x(x))(y);
+			}
+		};
+		return g(g);
+	}
+	/*var Y = this.Y = function(f) {
+		var logic = function(g) {
+			return function() {
+				return f(g(g)).apply(null, arguments);
+			};
+		}
+		
+		return U(logic);
+	};*/
+	
+	var True = this.true = K;
+	var False = this.false = function (x) {
+		return K(I(x));
+	}
+	var If = this.if = C;
+	var Not = this.not = function(x) {
+		return False(True(x));
+	}
+	var Or = this.or = function(x) {
+		return True(x);
+	}
+	var And = this.and = function(x) {
+		return False(x);
+	}
+	return this;
+}();
+Sprockets.Observer = function (notify, unsubscriber, options) {
+	Sprockets.Disposable.call(this, unsubscriber);
+	
+	var notifier = Sprockets.Function(notify, options);
+	Sprockets.define(this).getter("notify", notifier);
+}
+Sprockets.Observable = function (subscribe, unsubscribe) {
+	var observers = new Sprockets.Collections.Mutable();
+	Sprockets.define(this)
+		.getter("notify", function (/*arguments*/) {
+			var args = Array.prototype.slice.call(arguments);
+			observers.each(function (observer) {
+				observer.notify.apply(observer, args);
+			});
+		})
+		.getter("subscribe", function (notify, options) {
+			var remove = observers.remove;
+			var observer = new Sprockets.Observer(notify, remove, options);
+			if(subscribe) subscribe(observer);
+			observers.push(observer);
+			return observer;
+		}
+	);
+	Sprockets.Disposable.call(this, function () {
+		observers.each(function (observer) {
+			if(unsubscribe) unsubscribe(observer);
 			observer.dispose();
 			delete observer;
 		});
-		self.observers.clear();
+		observers.clear();
 	});
 }
-Sprockets.Observable.prototype = {
-	notify: function (value) {
-		var self = this;
-		this.observers.each(function(observer) {
-			observer(value);
-		});
-	},
-	subscribe: function (notify, options) {
-		var index = this.observers.length;
-		var remove = this.observers.remove;
-		var observer = new Sprockets.Observer(notify, remove, options);
-
-		this.observers.add(observer);
-		return observer;
-	}
-}
-
-Sprockets.Proxy = function (element, callback) {
-	var result = function (name) {
-		var property = function (value) {
-			if (value) result[name] = value;
-			else return result[name];
-		}
-		Sprockets.Disposable.call(property, function () {
-			var value = element[name];
-			delete element[name];
-
-			if (callback) {
-				callback("delete", name, value);
-			}
-		});
-		property.sync = function() {
-			var _value = element[name];
-
-			if (result.hasOwnProperty(name) == false) {
-				if (element.hasOwnProperty(name) == false) {
-					if(callback) {
-						callback("create", name, _value);
-					}
-					element[name] = _value;
-				}
-				result.__defineGetter__(name, function () {
-					_value = element[name];
-					if(callback) {
-						callback("read", name, _value);
-					}
-					return _value;
-				});
-				result.__defineSetter__(name, function (value) {
-					_value = element[name] = value;
-					if(callback) {
-						callback("update", name, _value);
-					}
-				});
-			}
-		}
-		property.sync();
-		return property;
-	}
-	result.sync = function() {
-		for (var property in element) {
-			if (element.hasOwnProperty(property)) {
-				result(property);
-			}
-		}
-	}
-	result.sync();
-	return result;
-}
-
 Sprockets.Event = function (name, options) {
+	Sprockets.Function.call(Sprockets.Event);
+	
 	var event = new CustomEvent(name);
 	var bind = function (element, type, handler) {
 		var listener = element.addEventListener || element.attachEvent;
@@ -300,147 +414,134 @@ Sprockets.Event = function (name, options) {
 	this.subscribe = function (element, delegate) {
 		bind(element, name, delegate);
 		
-		var logic = function () {
-			element.dispatchEvent(event);
-		}
-		
-		Sprockets.Disposable.call(logic, function () {
-			unbind(element, name, delegate);
-		});
-		
-		return logic;
+		return new Sprockets.Disposable(
+			function () {
+				element.dispatchEvent(event);
+			},
+			function () {
+				unbind(element, name, delegate);
+			}
+		);
 	}
 }
-
-Sprockets.Events = (function () {
-	var bind = function (element, type, handler) {
-		if (element.addEventListener) {
-			element.addEventListener(type, handler, false);
+Sprockets.Html = function (element) {
+	Sprockets.Composite.call(this, element);
+	Sprockets.Disposable.call(this, function () {
+		element = document.removeChild(element);
+		element = null;
+	});
+	Sprockets.define(this).getter("subscribe", function (name, delegate) {
+		var event = new Sprockets.Event(name);
+		return event.subscribe(element, delegate);
+	});
+}
+Sprockets.Proxy = function (element, callback) {
+	var property = function (member) {
+		if(member !== undefined) {
+			var result = function (value) {
+				if(value !== undefined) {
+					if (callback) {
+						if(element.hasOwnProperty(member)) {
+							callback("update", member, value);
+						}
+						else {
+							callback("create", member, value);
+						}
+					}
+					return element[member] = value;
+				}
+				else {
+					if (callback) {
+						if(element.hasOwnProperty(member)) {
+							callback("read", member, value);
+						}
+						else {
+							callback("create", member, value);
+						}
+					}
+					return element[member];
+				}
+			}
+			Sprockets.Disposable.call(result, function () {
+				if (callback) {
+					var value = element[member];
+					callback("delete", member, value);
+				}
+				element[member] = null;
+				delete element[member];
+			});
+			return result;
 		}
 		else {
-			element.attachEvent('on' + type, handler);
+			return element;
 		}
 	}
-	var unbind = function (element, type, handler) {
-		if (element.removeEventListener) {
-			element.removeEventListener(type, handler, false);
-		}
-		else {
-			element.detachEvent('on' + type, handler);
-		}
-	}
-	return function (element, name, delegate) {
-		var event = new Event(name);
-		bind(element, name, delegate);
-
-		var result = function () {
-			element.dispatchEvent(event);
-		}
-		Sprockets.Disposable.call(result, function () {
-			unbind(element, name, delegate);
-		});
-		
-		return result;
-	}
-})();
-
-Sprockets.Timer = function(interval) {
-	var self = this;
-	var observers = new Sprockets.Array();
+	return property;
+}
+Sprockets.Timer = function(interval, subscribe, unsubscribe) {
 	var handle;
-	
-	var logic = function () {
-		observers.each(function (observer) {
-			observer();
+	var self = this;
+	Sprockets.Observable.call(this, subscribe, unsubscribe);
+	Sprockets.define(this)
+		.getter("start", function () {
+			if(handle) self.stop();			
+			handle = setInterval(self.notify, interval);
+		})
+		.getter("stop", function () { 
+			clearInterval(handle); 
 		});
-	}
-	
-	self.subscribe = function(delegate, options) {
-		var observer = new Sprockets.Observer(delegate, options);
-		var disposable = new Sprockets.Disposable(function () {
-			observers.remove(observer);
-		});
-		
-		observers.add(observer);
-		return disposable;
-	}
-	self.start = function () { 
-		handle = setInterval(logic, interval); 
-	}
-	self.stop = function () { 
-		clearInterval(handle); 
-	}
 }
 
-
-
-Sprockets.Invoker = function () {
-	var handle = (function () {
-		var _value = null;
-		return function (value) {
-			if(value) {
-				_value = new Sprockets.Proxy(value);
+Sprockets.Invoker = function (handle) {	
+	return function (command) {
+		return function (/*arguments*/) {
+			var executed = false;
+			var args = Array.prototype.slice.call(arguments);
+			var proxy = new Sprockets.Proxy(handle);
+			var handler = function(value) {
+				if(value) proxy = new Sprockets.Proxy(value);
+				return proxy();
 			}
-			return _value; 
-		}
-	})();
-	var property = (function() {
-		var _value = null;
-		return function (value) {
-			if(value) {
-				var element = handle();
-				_value = element(value);
+			var logic = function (/*arguments*/) {
+				var innerArgs = Array.prototype.slice.call(arguments);
+				if(executed === false) {			
+					command.apply(handler, args);
+					executed = true;
+				}
 			}
-			return _value;
+			
+			var result = function () {
+				return proxy();
+			}
+			Sprockets.define(result)
+				.getter("redo", function(/*arguments*/) {
+					var innerArgs = Array.prototype.slice.call(arguments);
+					logic(innerArgs);
+				})
+				.getter("undo", function () {
+					if(executed === true) {
+						executed = false;
+						command.undo.apply(handler, args);
+					}
+				});
+				
+			logic(args);
+			return result;
 		}
-	})();
-	
-	this.bind = function(element, member) {
-		handle(element);
-		handle().sync();
-		if(member) {
-			property(member);
-			property().sync();
-		}
-	}
-	
-	this.visit = function(command) {
-		command.data = property();
 	}
 }
 Sprockets.Command = function (options) {
-	var self = this;
-	
-	var result = function () {
-		var args = arguments;
-		this.undo = function () { 
-			options.undo.apply(result.data, args); 
-		}
-
-		options.execute.apply(result.data, args);
-		return this;
-	}
+	var result = options.do;
+	Sprockets.define(result).getter("undo", options.undo);
 	return result;
 }
-
 Sprockets.Composite = function(prototype) {
 	var handle;
 	
-	if(typeof prototype == "function") {
-		var constructor = prototype.constructor.bind.call(prototype);
-		prototype = new constructor();
-	}
 	function get(member) {
 		if(Object.prototype.toString.call(handle) === '[object Array]') {
-			var distinct = handle;//Sprockets.Collections.distinct.call(handle);
-			return Sprockets.Collections.reduce.call(distinct, function (first, second) {
-				return first
-					? second
-						? first + second[member]
-						: first
-					: second
-						? second[member]
-						: null;
+			return Sprockets.Collections.reduce(handle, function (first, second) {
+				return first[member] + second[member];
 			});
 		}
 		else {
@@ -449,7 +550,7 @@ Sprockets.Composite = function(prototype) {
 	}
 	function set(member, value) {
 		if(Object.prototype.toString.call(handle) === '[object Array]') {
-			Sprockets.Collections.map.call(handle, function (element) {
+			Sprockets.Collections.map(handle, function (element) {
 				element[member] = value;
 				return element;
 			});
@@ -457,185 +558,268 @@ Sprockets.Composite = function(prototype) {
 		else handle[member] = value;
 	}
 	
-	for(var member in prototype) {
-		this[member] = (function() {
-			var name = member;
-			
+	var result = function(members) {
+		if(typeof members == "function") {
+			var constructor = prototype.constructor.bind.call(members);
+			handle = new constructor();
+		}
+		else {
+			handle = members;
+		}
+		
+		return function(name) {		
 			return function (value) {
 				if(value) set(name, value);
 				else return get(name);
 			}
-		})();
+		}
 	}
 	
-	this.bind = function (element) {
-		handle = element;
-	}
+	result(prototype);
+	return result;
 }
-
 Sprockets.Iterator = function(items) {
-	var self = this, index = 0;
+	var self = this;
+	var data = { index: 0 };
 	
-	items = items || [];
-	
-	self.__defineGetter__("Collection", function () { return items; });
-	self.__defineGetter__("Index", function () { return index; });
-	
-	self.where = function (predicate) {
-		self.reset();
+	Sprockets.define(self)
+		.getter("index", data, "index")
+		.getter("where", function (predicate) {
+			self.reset();
 
-		var results = []
-		each(function (value) {
-			if (predicate(value)) {
-				results.push(value);
-			}
-		});
-		return results;
-	}
-	
-	self.first = function () {
-		self.reset();
-		var result = self.current();
-		return result;
-	}
-	
-	self.last = function () {
-		self.Index = items.length - 1;
-		return self.current();
-	}
-	
-	self.current = function () {
-		return self.Index < items.length
-			? items[self.Index]
-			: null;
-	}
-	
-	self.next = function () {
-		return ++self.Index <= items.length;
-	}
-	
-	self.previous = function () {
-		return --self.Index >= 0;
-	}
-	
-	self.reset = function () {
-		self.Index = 0;
-	}
-	
-	self.each = function (delegate) {
-		for (var index = 0, length = items.length; index < length; index++) {
-			var item = items[index];
-			var newItem = delegate(item);
-			if(newItem) items[index] = newItem;
-		}
-	}
-};
-Sprockets.Collections = {
-	each: function (delegate) {
-		var iterator = new Sprockets.Iterator(this);
-		iterator.each(delegate);
-	},
-	clear: function () {
-		while(this.length !== 0) {
-			delete this.pop();
-		}
-	},
-	add: function (/* arguments */) {
-		this.push.apply(this, arguments);
-	},
-	remove: function (/* arguments */) {
-		var __iterator, __argument, __results, __length, __value;
-
-		__length = this.length;
-		__results = new Sprockets.Array();
-
-		if (__iterator === 0) {
-			throw new Error("Invalid Arguments");
-		}
-		while (__length-- > 0) {
-			__value = this.pop();
-			__iterator = arguments.length;
-			
-			while (__iterator-- > 0) {
-				__argument = arguments[__iterator];
-
-				if (__value !== __argument) {
-					__results.push(__value);
+			var results = []
+			each(function (value) {
+				if (predicate(value)) {
+					results.push(value);
 				}
-			}
-		}
-
-		__length = __results.length;
-		while (__length-- != 0) {
-			this.push(__results.pop());
-		}
-	},
-	filter: function (delegate) {
-		var __array, __value, __condition, __i;
-
-		__array = new Sprockets.Array();
-		__value;
-		__condition;
-		__i = this.length;
-
-		while (__i-- != 0) {
-			__value = this.pop();
-			__condition = delegate(__value);
-
-			if (__condition === true) {
-				__array.push(__value);
-			}
-		}
-
-		__i = __array.length;
-		while (__i-- != 0) {
-			__value = __array.pop();
-			this.push(__value);
-		}
-	},
-	map: function (delegate) {
-		var result = new Sprockets.Array();
-		Sprockets.Collections.each.call(this, function (element) {
-			result.push(delegate(element));
+			});
+			return results;
+		})
+		.getter("first", function () {
+			self.reset();
+			var result = self.current();
+			return result;
+		})
+		.getter("last", function () {
+			self.Index = items.length - 1;
+			return self.current();
+		})
+		.getter("current", function () {
+			return self.Index < items.length
+				? items[self.Index]
+				: null;
+		})
+		.getter("next", function () {
+			return ++self.Index <= items.length;
+		})
+		.getter("previous", function () {
+			return --self.Index >= 0;
+		})
+		.getter("reset", function () {
+			self.Index = 0;
+		})
+		.getter("each", function (delegate) {
+			Sprockets.Collections.each(items, function (value) {
+				delegate(value);
+			});
 		});
-		
-		return result;
-	},
-	reduce: function (delegate) {
-		var _result;
-
-		for (var i = 0, length = this.length; i < length; i++) {
-			_result = delegate(_result, this[i]);
-		}
-		return _result;
-	},
-	contains: function (element) {
-		var result = false;
-		for (var i = 0, length = this.length; i < length; i++) {
-			var item = this[i];
-			result = Sprockets.equals(item, element);
-			if(result === true) break;
-		}
-		return result;
-	},
-	distinct: function () {
-		var self = this;
-		var array = this[0];
-		var result = new Sprockets.Array();
-		
-		for (var i = 0, length = array.length; i < length; i++) {
-			var element = array[i];
-			
-			var contains = result.contains(element);
-			if (contains === false) {
-				result.add(element);
-			}
-		};
-		
-		return result;
-	}
 };
-
+Sprockets.Collections = function () {
+	var self = new Object();
+	Sprockets.define(self)
+		.getter("every", function (array, predicate) {
+			var result = true;
+			self.each(array, function (element) {
+				return result = result && predicate(element);
+			});
+			return result;
+		})
+		.getter("some", function (array, predicate) {
+			var result = false;
+			self.for(array, function (index, element) {
+				return result = result || predicate(index, element);
+			});
+			return result;
+		})
+		.getter("contains", function (array, element) {
+			return self.some(array, function(index, value) {
+				return Sprockets.equals(element, array[index]);
+			});
+		})
+		.getter("reduce",	function (array, aggregate) {
+			var result;
+			self.each(array, function (value) {
+				result =  result
+					? value
+						? aggregate(result, value)
+						: result
+					: value
+						? value
+						: null;
+			});
+			return result;
+		})
+		.getter("map", function (array, delegate) {
+			self.for(array, function (index, value) {
+				array[index] = delegate(value);
+			});
+			return array;
+		})
+		.getter("filter", function (array, predicate) {
+			self.for(array.reverse(), function (index, value) {
+				if(predicate(value)) {
+					self.removeAt(array, index);
+				}
+			});
+			array.reverse();
+			return array;
+		})
+		.getter("distinct",	function(array) {
+			var results = [];
+			self.for(array, function (index, element) {
+				if (self.contains(results, element) === false) {
+					results.push(element);
+				}
+			});
+			array.length = 0;
+			array.push.apply(array, results);
+			return array;
+		})
+		.getter("indexOf", function (array, element) {
+			var result = -1;
+			self.for(array, function (index, value) {
+				if(Sprockets.equals(element, value)) {
+					result = index;
+				}
+			});
+			return result;
+		})
+		.getter("add", function(array/*, elements*/) {
+			var args = Array.prototype.slice.call(arguments, 1);
+			array.push.apply(array, args);
+			return array;
+		})
+		.getter("addAt", function(array, index/*, elements*/) {
+			var args = Array.prototype.slice.call(arguments, 2);
+			args.splice(0, 0, index, 0);
+			array.splice.apply(array, args);
+			return array;
+		})
+		.getter("remove", function (array/*, elements */) {
+			var args = Array.prototype.slice.call(arguments, 1);
+			self.filter(array, function (value) {
+				return self.contains(args, value);
+			});
+			return array;
+		})
+		.getter("removeAt", function(array, index) {
+			var rest = array.slice(index + 1);
+			array.length = index;
+			array.push.apply(array, rest);
+			return array;
+		})
+		.getter("for", function (array, delegate) {
+			for(var i = 0, length = array.length; i < length; i++) {
+				delegate(i, array[i]);
+			}
+			return array;
+		})
+		.getter("each", function (array, delegate) {
+			self.for(array, function (index, value) {
+				return delegate(value);
+			});
+			return array;
+		})
+		.getter("clear", function (array) {
+			while(array.length !== 0) {
+				delete array.pop();
+			}
+			return array;
+		})
+	return self;
+}();
+Sprockets.Collections.Mutable = function (/*arguments*/) {
+	var self = this;
+	var base = Sprockets.Collections;
+	var combinator = Sprockets.Combinators;
+	var args = Array.prototype.slice.call(arguments);
+	Array.apply(self, args);
+	
+	Sprockets.define(self)
+		.getter("each", function (delegate) { return base.each(self, delegate); })
+		.getter("for", function (delegate) { return base.for(self, delegate); })
+		.getter("every", function (delegate) { return base.every(self, delegate); })
+		.getter("some", function (delegate) { return base.some(self, delegate); })
+		.getter("contains", function (element) { return base.contains(self, element); })
+		.getter("map", function (delegate) { return base.map(self, delegate); })
+		.getter("filter", function (predicate) { return base.filter(self, predicate); })
+		.getter("distinct", function () { return base.distinct(self); })
+		.getter("clear", function () { return base.clear(self); })
+		.getter("add", function (/*elements*/) {
+			var args = Array.prototype.slice.call(arguments);
+			args.splice(0, 0, self);
+			return base.add.apply(self, args);
+		})
+		.getter("addAt", function (index/*, elements*/) {
+			var args = Array.prototype.slice.call(arguments, 1);
+			args.splice(0, 0, self, index);
+			return base.addAt.apply(self, args); 
+		})
+		.getter("remove", function (/*elements*/) {
+			var args = Array.prototype.slice.call(arguments);
+			args.splice(0, 0, self);
+			return base.remove.apply(self, args); 
+		})
+		.getter("removeAt", function (index/*, elements*/) {
+			var args = Array.prototype.slice.call(arguments, 1);
+			return base.removeAt(self, index, args); 
+		});
+	
+	self.add.apply(self, args);
+	return self;
+};
+Sprockets.Collections.Mutable.prototype = new Array();
+Sprockets.Collections.Immutable = function (/*arguments*/) {
+	var self = this;
+	var base = Sprockets.Collections;
+	var combinator = Sprockets.Combinators;
+	var args = Array.prototype.slice.call(arguments);
+	Array.apply(self, args);
+	
+	Sprockets.define(self)
+		.getter("every", function (delegate) { return base.every(self.slice(), delegate); })
+		.getter("some", function (delegate) { return base.some(self.slice(), delegate); })
+		.getter("contains", function (element) { return base.contains(self.slice(), element); })
+		.getter("map", function (delegate) { return base.map(self.slice(), delegate); })
+		.getter("filter", function (predicate) { return base.filter(self.slice(), predicate); })
+		.getter("distinct", function () { return base.distinct(self.slice()); })
+		.getter("add", function (/*elements*/) {
+			var args = Array.prototype.slice.call(arguments);
+			var sliced = self.slice();
+			args.splice(0, 0, sliced);
+			return base.add.apply(sliced, args);
+		})
+		.getter("addAt", function (index/*, elements*/) {
+			var args = Sprockets.Array.prototype.slice.call(arguments, 1);
+			var sliced = self.slice();
+			args.splice(0, 0, sliced, index);
+			return base.addAt.apply(sliced, args); 
+		})
+		.getter("remove", function (/*elements*/) {
+			var args = Array.prototype.slice.call(arguments);
+			var sliced = self.slice();
+			args.splice(0, 0, sliced);
+			return base.remove.apply(sliced, args); 
+		})
+		.getter("removeAt", function (index/*, elements*/) {
+			var args = Array.prototype.slice.call(arguments, 1);
+			return base.removeAt(self.slice(), index, args); 
+		});
+	
+	self.push.apply(self, args);
+	return self;
+};
+Sprockets.Collections.Immutable.prototype = new Array();
 Sprockets.Singleton = function(obj) {
 	var instance;
 	
@@ -645,14 +829,14 @@ Sprockets.Singleton = function(obj) {
 		}
 		else {
 			var result = obj.constructor.bind.apply(obj);
-			instance = new result();
-			console.log(instance);
+			var args = arguments.slice();
+			instance = new result.apply(result, args);
 			return instance;
 		}
 	}
 }
 
-Sprockets.Events(window, "load", function () {
+new Sprockets.Html(window).subscribe("load", function () {
 	var ___iframe = document.createElement("iframe");
 	___iframe.style.display = "none";
 	___iframe.setAttribute("name", "SprocketEnvironment");
@@ -667,24 +851,7 @@ Sprockets.Events(window, "load", function () {
 			"parent.Sprockets.Object = Object;" +
 			"parent.Sprockets.Array = Array;" +
 		"<\/script>"
-	);	
-	
-	Sprockets.Html = function (element) {
-		this.on = function (name, delegate) {
-			return Sprockets.Events(element, name, delegate);
-		}
-
-		var disposable = new Sprockets.Disposable(function () {
-			element = document.removeChild(element);
-			element = null;
-		});
-		var _onDispose = this.on("dispose", disposable.dispose);
-
-		this.dispose = _onDispose;
-		this.__defineGetter__("isDisposed", function () { 
-			return disposable.isDisposed; 
-		});
-	}
+	);
     
 	Sprockets.String.prototype.format = function (string) {
 		var result = string.replace(/{(\d+)}/g, function (match) {
@@ -699,23 +866,6 @@ Sprockets.Events(window, "load", function () {
 			return v.toString(16);
 		})
 	}
-	
-	
-	//Sprockets.implement(Sprockets.Array.prototype, Sprockets.Collections);
 	document.body.removeChild(___iframe);
 	frames["SprocketEnvironment"] = null;
 });
-
-(function _init() {
-
-    function _setGlobalDefinition() {
-        if (window && Sprockets.Environment == window) {
-            window.Sprockets = Sprockets;
-        }
-        else {
-            throw new Exception("Error: the window object must exist as the executing Javascript runtime environment.");
-        }
-    }
-
-    _setGlobalDefinition();
-})();

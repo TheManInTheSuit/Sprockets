@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Functional Array Examples</title>
+    <script src="Sprockets.js"></script>
+    <script>
+	var handle = new Sprockets.Html(window);
+	
+        handle.subscribe("load", function () {
+		test(FunctionalAdd);
+		test(FunctionalAddAt);
+		test(FunctionalRemove);
+		test(FunctionalRemoveAt);
+		test(FunctionalEvery);
+		test(FunctionalSome);
+		test(FunctionalContains);
+		test(FunctionalFilter);
+		test(FunctionalReduce);
+		test(FunctionalMap);
+		test(FunctionalDistinct);
+        });
+	
+	function assert(predicate, message) {
+		if(!predicate) throw new Error(message || "Assert condition failed");
+		else return true;
+	}
+	function test(delegate) {
+		var string = "Test: " + delegate.name;
+		
+		try { 
+			delegate();
+			string += " passed.";
+		}
+		catch (error) { string += " failed.  Reason: " + error; }
+		console.log(string);
+	}
+	
+	function FunctionalAdd() {
+		var array = new Sprockets.Collections.Immutable();
+		var length = array.length;
+		
+		var result = array.add(5);
+		
+		assert(length === array.length);
+		assert(array[0] !== 5);
+		
+		assert(length !== result.length);
+		assert(result[0] === 5);
+	}
+	function FunctionalAddAt() {
+		var array = new Sprockets.Collections.Immutable(0, 1, 2, 3, 4);
+		var length = array.length;
+		var value = 5;
+		
+		var result = array.addAt(1, value);
+		assert(length === array.length, "Length hasn't changed.");
+		assert(array[1] !== value, "Index is in an unexpected state");
+		
+		assert(length !== result.length, "Length hasn't changed.");
+		assert(result[1] === value, "Index is in an unexpected state");
+	}
+	function FunctionalRemove() {
+		var array = new Sprockets.Collections.Immutable(0, 1, 2, 3, 4);
+		var length = array.length;
+		var value = 2;
+		
+		var result = array.remove(value);
+		
+		assert(length === array.length, "Length hasn't changed.")
+		assert(length !== array.length + 1, "Length is in an unexpected state.");
+		assert(array[2] === value);
+		
+		assert(length !== result.length, "Length hasn't changed.")
+		assert(length === result.length + 1, "Length is in an unexpected state.");
+		assert(result[2] !== value);
+	}
+	function FunctionalRemoveAt() {
+		var array = new Sprockets.Collections.Immutable(0, 1, 2, 3, 4);
+		var length = array.length;
+		var value = 2;
+		
+		var result = array.removeAt(value);
+		
+		assert(length === array.length)
+		assert(array[2] === value);
+		assert(array[2] !== 3);
+		
+		assert(length !== result.length)
+		assert(result[2] !== value);
+		assert(result[2] === 3);		
+	}
+	function FunctionalEvery() {
+		var array = new Sprockets.Collections.Immutable(0, 1, 2, 3, 4);
+		var predicate = function (n) { return n < 5; };
+		
+		var result = array.every(predicate);
+		
+		assert(result, "Not all members satisfied the predicate.");
+	}
+	function FunctionalSome() {
+		var array = new Sprockets.Collections.Immutable(0, 2, 4, 6, 8);
+		var predicate = function (n) { return n < 5; };
+		
+		var result = array.some(predicate);
+		
+		assert(result, "Not all members satisfied the predicate.");
+	}
+	function FunctionalContains() {
+		var array = new Sprockets.Collections.Immutable(0, 1, 2, 3);
+		var result = array.contains(2);
+		
+		assert(result, "Array did not contain the specified entry.");
+		
+		result = array.contains(5);
+		assert(result === false, "Contains should have returned false");
+	}
+	function FunctionalFilter() {
+		var array = new Sprockets.Collections.Immutable(0, 1, 2, 3);
+		var predicate = function (n) { return n === 2; };
+		
+		var result = array.filter(predicate);
+		
+		assert(array.length !== 3);
+		assert(array[2] !== 3);
+		
+		assert(result.length === 3);
+		assert(result[0] === 0);
+		assert(result[1] === 1);
+		assert(result[2] === 3);
+	}
+	function FunctionalReduce() {		
+		var array = new Sprockets.Collections.Immutable(0, 1, 2, 3);
+		var predicate = function (first, second) { return first + second; };
+		
+		var result = array.reduce(predicate);
+		
+		assert(result === 6);
+	}
+	function FunctionalMap() {		
+		var array = new Sprockets.Collections.Immutable(0, 1, 2, 3);
+		var delegate = function (n) { return n * 2; };
+		
+		var result = array.map(delegate);
+		
+		assert(array[1] === 1);
+		assert(array[2] === 2);
+		assert(array[3] === 3);
+		
+		assert(result[0] === 0);
+		assert(result[1] === 2);
+		assert(result[2] === 4);
+		assert(result[3] === 6);
+	}
+	function FunctionalDistinct() {
+		var array = new Sprockets.Collections.Immutable(0, 0, 1, 1, 2, 2);
+		
+		var result = array.distinct();
+		
+		assert(array.length === 6);
+		assert(array[0] === 0);
+		assert(array[2] === 1);
+		assert(array[4] === 2);
+		
+		assert(result.length === 3);
+		assert(result[0] === 0);
+		assert(result[1] === 1);
+		assert(result[2] === 2);
+	}
+    </script>
+</head>
+<body>
+</body>
+</html>
