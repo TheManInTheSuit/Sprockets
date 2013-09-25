@@ -142,6 +142,7 @@ var Sprockets = {
 	}
 };
 Sprockets.Object = function () {
+	
 }
 Sprockets.Disposable = function (unsubscriber, handle) {
 	var data = { IsDisposed: false }
@@ -153,7 +154,6 @@ Sprockets.Disposable = function (unsubscriber, handle) {
 			data.IsDisposed = true;
 		});
 }
-
 Sprockets.Function = function (delegate, options) {
 	options = options || { };
 	var asyncResult = {
@@ -280,90 +280,203 @@ Sprockets.Function.prototype = function () {
 }();
 
 Sprockets.Combinators = function () {
-	//Ix = x
-	var I = this.I = function (x) {
-		return x;
-	}
-	//Kxy = x
-	var K = this.K = function (x, y) {
-		return function() {
-			return x;
-		}
-	}
 	//Sxyz = xz(yz)
-	var S = this.S = function (x, y, z) {
+	var S = this.S = this.starling = function (x) {
 		return function (y) {
 			return function (z) {
 				return x(z)(y(z));
 			}
 		}
 	}
-	//ix = xSK
-	var iota = this.iota = function (x) {
-		return x(S)(K);
+	//Kxy = x
+	var K = this.K = this.kestrel = this.true = function (x) {
+		return function(y) {
+			return x;
+		}
 	}
+	//Ix = x
+	var I = this.I = this.identity = this.idiot = function (x) {
+		return x;
+	}
+	//ix = xSK
+	//i = S(SI(KS))(KK)
+	var iota = this.iota = S( S(I) (K(S))) (K(K));
 	//Bxyz = x(yz)
-	//B = S (K S) K
-	var B = this.B = function (x) {
+	//S (K S) K
+	var B = this.B = this.bluebird = function (x) {
 		return function(y) {
 			return function(z) {
 				return x(y(z));
 			}
 		}
 	}
+	
+	//BB = S(K((S(K(S))(K))));
+	var D = this.D = this.dove = B(B);
+	//BBB
+	var B1 = this.B1 = this.blackbird = B(B(B));
+	
+	//B(BBB) = B(B1) = B3
+	var E = this.E = this.eagle = B(B1);
+	
+	//B(BBB)B = B(B1)B
+	var B2 = this.B2 = this.bunting = E(B);
+
+	//B(BB) = B(D)
+	var D1 = this.D1 = this.dickcissel = B(D);
+	//B(BB)B = B(D)B = D1B
+	var B3 =this.B3 = this.becard = D1(B);
+	
 	//Cxyz = xyz
-	//C = S (S (K ( S (K S) K)) S) (K K)
-	var C = this.C = function (x) {
+	//S(BBS)(KK)
+	//S (S (K ( S (K S) K)) S) (K K)
+	var C = this.C = this.cardinal = function (x) {
 		return function (y) {
 			return function (z) {
 				return x(y)(z);
 			}
 		}
 	}
+
+	//BB(BB) = D(D)
+	var D2 = this.D2 = this.dovekies = D(D);
+
+	//B(BBB)(B(BBB)) = B(D1)(B(D1)) = E(E)
+	var E1 = this.E1 = this.baldeagle = E(E);
+	
+	//CI
+	var T = this.T = this.thrush = C(I);
+	//ETTET
+	var F = this.F = this.finch = E(T(T(E(T))));
+	//BBC
+	var G = this.G = this.goldfinch = B(B(C));
+	//BW(BC)
+	var H = this.H = this.hummingbird = B(W)(B(C));
+	
+	//BC
+	var C_ = this.C_ = this.cardinal_ = B(C);
+	//C_C_
+	var R_ = this.R_ = this.robin_ = C_(C_);
+	//BBT
+	var R = this.R = this.robin = B(B(T));
+	
+	//SII
+	var M = this.M = this.mockingbird = function (x) {
+		return x(x);
+	};
+	
+	//C(BMR)
+	var W = this.W = this.warbler = C(B(M(R)));
+	//B(BC)(W(BC(B(BBB)))) = B(BC)(W(BC(E)))
+	var J = this.J = this.jay = B(B(C))(W(B(C)(E)));
 	//Wxy = xyy
-	//W = S S (S K)
-	var W = this.W = function(x) {
+	//CBM
+	//S S (S K)
+	var L = this.L = this.lark = C(B(M));
+	/*function(x) {
 		return function (y) {
-			return x(y)(y);
+			//return x(y(y));
+			//return x(B(y));
+			//return B(x)(M);
+		}
+	}*/
+
+	//BM
+	var M2 = this.M2 = this.doublemockingbird = B(M);
+	var M3 = this.M3 = this.meadowlark = function (x) {
+		return function (y) {
+			return M(x)(y);
 		}
 	}
-	//Ux = x(x)
-	var U = this.U = function(x) {
-		return x(x);
-	}
+	//SI
+	var O = this.O = this.owl = S(I);
+	//CB
+	var Q = this.Q = this.queerbird = C(B);
+	//BCB = B(Q)
+	var Q1 = this.Q1 = this.quixoticbird = B(Q);
+	//C(BCB) = C(Q1)
+	var Q2 = this.Q2 = this.quizzicalbird = Q1(C);
+	//BT
+	var Q3 = this.Q3 = this.quirkybird = B(T);
+	
+
+	//BC_R_
+	var F_ = this.F_ = this.finch_ = B(C_(R_));
+	//F_B
+	var Q4 = this.Q4 = this.quackybird = F_(B);
+
+
+	//LO
+	var U = this.U = this.turing = L(O);
+	//BCT
+	var V = this.V = this.vireo = this.pairing = B(C(T));
+
+	//CW
+	var W1 = this.W1 = this.conversewarbler = C(W);
+	//SLL
 	//Y = S (K (S I I)) (S (S (K S) K) (K (S I I)))
-	var Y = this.Y = function(f) {
+	var Y = this.Y = this.whybird = this.sage = function(f) {
 		function g(x) {
 			return function (y) {
-				return f(x(x))(y);
+				return f(M(x))(y);
 			}
 		};
 		return g(g);
 	}
-	/*var Y = this.Y = function(f) {
-		var logic = function(g) {
-			return function() {
-				return f(g(g)).apply(null, arguments);
-			};
-		}
-		
-		return U(logic);
-	};*/
+	var Z = this.Z = function (x) {
+		return M(B(x)(M3));
+	}
 	
-	var True = this.true = K;
-	var False = this.false = function (x) {
-		return K(I(x));
+	//S(SK)
+	var I_ = this.I_ = this.identity_ = this.idiot_ = S(S(K));
+	//BW
+	var W_ = this.W_ = this.warbler_ = B(W);
+
+	//C_F_
+	var V_ = this.V_ = this.vireo_ = C_(F_);
+	
+	//B(BW)
+	var W__ = this.W__ = this.warbler__ = B(B(W));
+	//BC_
+	var C__ = this.C__ = this.cardinal__ = B(C_);
+	//BR_
+	var R__ = this.R__ = this.robin__ = B(R_);
+	//BF_
+	var F__ = this.F__ = this.finch__ = B(F_);
+	//BV_
+	var V__ = this.V__ = this.vireo__ = B(V_);
+	
+	//KI
+	var KI = this.KI = this.kite = this.false = K(I);
+
+	//MM
+	//var Omega = this.omega = M(M);
+	
+	//KM
+	var KM = this.KM = this.konstantmocker = K(M);
+	//C(KM) 
+	var CKM = this.CKM = this.crossedkonstantmocker = KM(C);
+	//YO
+	var Theta = this.theta = Y(O);
+
+	var If = this.if = function (f) {
+		return f ? K : KI;
+	};
+	var Not = this.not = (KI)(K);
+	var Or = this.or = K;
+	var And = this.and = KI;
+	
+	var gen = this.gen = function (f) {
+		return function (g) {
+			return function (x) {
+				return f.call(g, x);
+			}
+		}
 	}
-	var If = this.if = C;
-	var Not = this.not = function(x) {
-		return False(True(x));
+	var rec = this.rec = function (f) {
+		return Z(gen(f));
 	}
-	var Or = this.or = function(x) {
-		return True(x);
-	}
-	var And = this.and = function(x) {
-		return False(x);
-	}
+	
 	return this;
 }();
 Sprockets.Observer = function (notify, unsubscriber, options) {
@@ -425,13 +538,19 @@ Sprockets.Event = function (name, options) {
 	}
 }
 Sprockets.Html = function (element) {
+	var events = [];
+	
 	Sprockets.Composite.call(this, element);
 	Sprockets.Disposable.call(this, function () {
 		element = document.removeChild(element);
 		element = null;
 	});
 	Sprockets.define(this).getter("subscribe", function (name, delegate) {
-		var event = new Sprockets.Event(name);
+		var event = events[name];
+		if(event === undefined) {
+			event = new Sprockets.Event(name);
+			events.push(event);
+		}
 		return event.subscribe(element, delegate);
 	});
 }

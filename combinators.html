@@ -4,24 +4,149 @@
     <title>Combinators Examples</title>
     <script src="Sprockets.js"></script>
     <script>
-        
-	var factorial = Sprockets.Combinators.Y(function (f) {
-		return function(n) {
-			return n ? n * f(n - 1) : 1;
+        var _ = Sprockets.Combinators;
+	var handle = new Sprockets.Html(window);
+	var multiply = function (a) {
+		return function (b) {
+			return a * b;
 		}
-	});
+	}
+	var invert = multiply(-1);
+	var double = multiply(2);
+	var triple = multiply(3);
+	var quadruple = bluebird(double)(double);
+	var square = function (n) { return multiply(n)(n); }
+	
+        handle.subscribe("load", function () {
+		test(s);
+		test(k);		
+		test(i);
+		
+		test(Bluebird);
+		test(Dove);
+		test(Blackbird);
+		test(Owl);
+		
+		test(True);
+		test(False);
+		test(If);
+		
+		test(Factorial);
+		test(Fibonacci);
+        });
+	
+	function assert(predicate, message) {
+		if(!predicate) throw new Error(message || "Assert condition failed");
+		else return true;
+	}
+	function test(delegate) {
+		var string = "Test: " + delegate.name;
+		
+		try { 
+			delegate();
+			string += " passed.";
+		}
+		catch (error) { string += " failed.  Reason: " + error; }
+		console.log(string);
+	}
 
-	var fibonacci = Sprockets.Combinators.Y(function (f) {
-		return function(n) {
-			return n < 2 ? 1 : f(n - 1) + f(n - 2);
-		}
-	});
 	
-	var result = factorial(10);
-	console.log(result);
+	function s() {
+		var x = multiply, y = double;
+		var result = S(x)(y);
+		
+		assert(result(2) === 8);
+	}
+	function k() {
+		var result = K(3);
+		assert(result(6) === 3);
+	}	
+	function i() {
+		var result = I(3);
+		assert(result === 3);
+	}
 	
-	result = fibonacci(25);
-	console.log(result);
+	
+	function Bluebird() {
+		var times6 = B(double)(triple);
+		var timesNeg6 = B(invert)(times6);
+		
+		var result = times6(-1);
+		assert(result === -6);
+		
+		result = timesNeg6(result);
+		assert(result === 36);
+	}
+	function Dove() {
+		var expected = 48;
+		var x = B(quadruple), y = triple, z = double;
+		var result = D(x)(y)(z);
+		
+		result = result(2);
+		assert(result === expected);
+	}
+	function Blackbird() {
+		var expected = 144;
+		var x = B(quadruple), y = triple, z = double;
+		var result = B1(B(x))(B(y))(z);
+		
+		result = result(y)
+		result = result(2);		
+		assert(result === expected);
+	}
+	function Owl() {
+		var f2 = function (f) { return f(2); };
+		var y = B(f2)(f2);
+		var z = multiply;
+		var result = owl(y)(z);
+		
+		assert(result(2) === 8);
+	}
+	
+	
+	function True() {
+		var expected = true;
+		var onTrue = K(true);
+		var onFalse = K(false);
+		var result = _.true(onTrue)(onFalse);
+		
+		assert(result() === true);
+	}
+	function False() {
+		var expected = false;
+		var onTrue = K(true);
+		var onFalse = K(false);
+		var result = _.false(onTrue)(onFalse);
+		
+		assert(result() === expected);
+	}
+	function If() {
+		var expected = true;
+		var onTrue = K(true);
+		var onFalse = K(false);
+		var result = _.if(true)(onTrue)(onFalse);
+		assert(result() === true);
+		
+		result = _.if(false)(onTrue)(onFalse);
+		assert(result() === false);
+	}
+	
+	function Factorial() {
+		var factorial = rec(function(n) {
+			var n1 = n - 1;
+			return n ? n * this(n1) : 1;
+		});
+		var result = factorial(10);
+		assert(result === 3628800);
+	}
+	function Fibonacci() {
+		var fibonacci = rec(function(n) {
+			var n1 = n - 1, n2 = n - 2;
+			return n < 2 ? 1 : this(n1) + this(n2);
+		});
+		var result = fibonacci(25);
+		assert(result === 121393);
+	}
     </script>
 </head>
 <body>
